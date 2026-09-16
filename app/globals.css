@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-track-700;
+  }
+  body {
+    background-image: radial-gradient(circle at 15% 0%, rgba(255, 90, 31, 0.06), transparent 45%),
+      radial-gradient(circle at 85% 20%, rgba(46, 168, 255, 0.05), transparent 40%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display font-semibold tracking-tightish text-white;
+  }
+  ::selection {
+    background: rgba(255, 90, 31, 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid #ff5a1f;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .hud-card {
+    @apply relative bg-track-900 border border-track-700 shadow-card;
+  }
+  .hud-tick {
+    @apply text-[11px] font-mono uppercase tracking-wideish text-track-400;
+  }
+  .stat-figure {
+    @apply font-mono tabular-nums;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono uppercase tracking-wideish border;
+  }
+}
+
+/* Thin technical scrollbars for the standings table */
+.telemetry-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.telemetry-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.telemetry-scroll::-webkit-scrollbar-thumb {
+  background: #2b3344;
+}
