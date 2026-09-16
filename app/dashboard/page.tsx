@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const hero = await getChampionshipFull(activeChampionships[0].id);
+  const hero = await getChampionshipFull(activeChampionships[0]!.id);
   const standings = computeStandings(hero);
   const nextRace = hero.races.find((r) => r.status === "OPEN");
   const lastRace = [...hero.races].reverse().find((r) => r.status === "COMPLETED");
