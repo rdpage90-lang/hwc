@@ -25,7 +25,7 @@ export default function NewChampionshipPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newDrivers, setNewDrivers] = useState<NewDriver[]>([]);
   const [draftName, setDraftName] = useState("");
-  const [draftColour, setDraftColour] = useState(CAR_COLOURS[0]);
+  const [draftColour, setDraftColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
 
   const [name, setName] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
