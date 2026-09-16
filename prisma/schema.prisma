@@ -1,0 +1,150 @@
+// HEAT World Championship (HWC) — V1 data model
+// See section 32-33 of the build spec for the reasoning behind this shape.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+enum ChampionshipStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum RaceStatus {
+  UPCOMING
+  OPEN
+  COMPLETED
+}
+
+enum ResultStatus {
+  FINISHED
+  DNF
+  DNS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(PLAYER)
+  createdAt    DateTime @default(now())
+
+  submittedResults RaceResult[] @relation("ResultSubmittedBy")
+  completedRaces   Race[]       @relation("RaceSubmittedBy")
+
+  @@map("users")
+}
+
+// Drivers exist independently of any championship (spec section 7) so the
+// same person/car can be added to many seasons and, later, accrue
+// career-wide stats without a schema change.
+model Driver {
+  id        String   @id @default(cuid())
+  name      String
+  nickname  String?
+  carColour String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  championships ChampionshipDriver[]
+  results       RaceResult[]
+
+  @@map("drivers")
+}
+
+model Championship {
+  id            String             @id @default(cuid())
+  name          String
+  year          Int
+  numberOfRaces Int                @default(8)
+  status        ChampionshipStatus @default(UPCOMING)
+
+  // Points awarded per finishing position, plus DNF/DNS handling. Shape:
+  // { "1": 10, "2": 8, "3": 6, "4": 5, "5": 4, "6": 3, "7": 2, "8": 1, "DNF": 0 }
+  // DNS always scores 0 regardless of this table (spec section 9) and is
+  // enforced in lib/scoring.ts, not stored here.
+  pointsSystem Json
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  // Set once the championship is completed — the resolved champion after
+  // ties are broken (spec section 17 & 26).
+  championDriverId String?
+
+  drivers ChampionshipDriver[]
+  races   Race[]
+
+  @@map("championships")
+}
+
+// Join table between Driver and Championship. `joinedRound` records which
+// round a driver's championship history starts at — this is what makes a
+// late joiner (spec section 8) correctly show "—" rather than DNS for the
+// rounds before they joined.
+model ChampionshipDriver {
+  id             String   @id @default(cuid())
+  championshipId String
+  driverId       String
+  joinedAt       DateTime @default(now())
+  joinedRound    Int      @default(1)
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  driver       Driver       @relation(fields: [driverId], references: [id])
+
+  @@unique([championshipId, driverId])
+  @@map("championship_drivers")
+}
+
+model Race {
+  id             String     @id @default(cuid())
+  championshipId String
+  roundNumber    Int
+  trackName      String
+  raceDate       DateTime?
+  status         RaceStatus @default(UPCOMING)
+
+  // Audit trail (spec section 34) — who completed the race and when.
+  submittedById String?
+  submittedAt   DateTime?
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  submittedBy  User?        @relation("RaceSubmittedBy", fields: [submittedById], references: [id])
+  results      RaceResult[]
+
+  @@unique([championshipId, roundNumber])
+  @@map("races")
+}
+
+// Immutable once written — see prisma/triggers.sql, which enforces this at
+// the database level as well as the application level (spec section 14).
+model RaceResult {
+  id                 String       @id @default(cuid())
+  raceId             String
+  driverId           String
+  resultStatus       ResultStatus
+  finishingPosition  Int?
+  championshipPoints Int
+
+  submittedById String?
+  submittedAt   DateTime @default(now())
+
+  race        Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  driver      Driver @relation(fields: [driverId], references: [id])
+  submittedBy User?  @relation("ResultSubmittedBy", fields: [submittedById], references: [id])
+
+  @@unique([raceId, driverId])
+  @@map("race_results")
+}
