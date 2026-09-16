@@ -21,7 +21,7 @@ export function AddDriverForm({ championshipId, existingDriverIds }: { champions
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedId, setSelectedId] = useState("");
   const [newName, setNewName] = useState("");
-  const [newColour, setNewColour] = useState(CAR_COLOURS[0]);
+  const [newColour, setNewColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
