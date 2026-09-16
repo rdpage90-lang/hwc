@@ -43,7 +43,7 @@ export default async function DriverProfilePage({ params }: { params: { id: stri
         <h3 className="text-lg mb-3">Race history</h3>
         <div className="hud-card divide-y divide-track-800">
           {championship.races.map((race, i) => {
-            const cell = row.perRound[i];
+            const cell = row.perRound[i] ?? null;
             return (
               <div key={race.id} className="flex items-center gap-4 px-4 py-3">
                 <span className="hud-tick w-16 shrink-0">R{race.roundNumber}</span>
