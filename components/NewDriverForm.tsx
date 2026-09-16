@@ -11,7 +11,7 @@ export function NewDriverForm() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
-  const [carColour, setCarColour] = useState(CAR_COLOURS[0]);
+  const [carColour, setCarColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
