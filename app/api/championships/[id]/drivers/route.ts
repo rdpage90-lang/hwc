@@ -4,13 +4,6 @@ import { apiHandler, DomainError } from "@/lib/api";
 import { requireAdmin } from "@/lib/session";
 import { addDriverToChampionshipSchema } from "@/lib/validations";
 
-// POST /api/championships/:id/drivers — add an existing driver, or create
-// and add a brand-new one, to an in-progress championship.
-//
-// Late-join rule (spec section 8): the driver's championship record starts
-// at the round *after* whichever round is currently open/in-progress. They
-// receive no points, and no DNS, for any earlier round — those rounds
-// render as "—" rather than a missed race (see lib/scoring.ts).
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
     await requireAdmin();
@@ -40,12 +33,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       let driverId = input.driverId ?? null;
 
       if (!driverId && input.newDriver) {
+        if (input.newDriver.userId) {
+          const alreadyLinked = await tx.driver.findUnique({ where: { userId: input.newDriver.userId } });
+          if (alreadyLinked) throw new DomainError("That user is already linked to another driver.");
+        }
         const driver = await tx.driver.create({
           data: {
             name: input.newDriver.name,
             nickname: input.newDriver.nickname || null,
             carColour: input.newDriver.carColour,
             avatarUrl: input.newDriver.avatarUrl || null,
+            userId: input.newDriver.userId || null,
           },
         });
         driverId = driver.id;
