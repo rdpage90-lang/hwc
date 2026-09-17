@@ -3,7 +3,10 @@ import { DomainError } from "@/lib/api";
 import type { ChampionshipFull } from "@/types";
 
 const fullInclude = {
-  drivers: { include: { driver: true }, orderBy: { joinedAt: "asc" as const } },
+  drivers: {
+    include: { driver: { include: { user: { select: { id: true, name: true } } } } },
+    orderBy: { joinedAt: "asc" as const },
+  },
   races: {
     include: { results: { include: { driver: true } } },
     orderBy: { roundNumber: "asc" as const },
