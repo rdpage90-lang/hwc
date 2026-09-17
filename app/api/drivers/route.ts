@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { apiHandler } from "@/lib/api";
+import { apiHandler, DomainError } from "@/lib/api";
 import { requireAdmin, requireUser } from "@/lib/session";
 import { createDriverSchema } from "@/lib/validations";
 
@@ -22,12 +22,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const input = createDriverSchema.parse(body);
 
+    if (input.userId) {
+      const alreadyLinked = await db.driver.findUnique({ where: { userId: input.userId } });
+      if (alreadyLinked) throw new DomainError("That user is already linked to another driver.");
+    }
+
     const driver = await db.driver.create({
       data: {
         name: input.name,
         nickname: input.nickname || null,
         carColour: input.carColour,
         avatarUrl: input.avatarUrl || null,
+        userId: input.userId || null,
       },
     });
 
