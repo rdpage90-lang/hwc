@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, DriverAvatar } from "@/components/ui";
+import { UserLinkedNameField } from "@/components/UserLinkedNameField";
 
 interface Driver {
   id: string;
@@ -15,6 +16,7 @@ interface NewDriver {
   name: string;
   nickname: string;
   carColour: string;
+  userId: string | null;
 }
 
 const CAR_COLOURS = ["Red", "Blue", "Yellow", "Green", "Orange", "Purple", "Black", "White", "Pink", "Cyan"];
@@ -25,6 +27,7 @@ export default function NewChampionshipPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newDrivers, setNewDrivers] = useState<NewDriver[]>([]);
   const [draftName, setDraftName] = useState("");
+  const [draftUserId, setDraftUserId] = useState<string | null>(null);
   const [draftColour, setDraftColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
 
   const [name, setName] = useState("");
@@ -61,8 +64,9 @@ export default function NewChampionshipPage() {
 
   function addDraftDriver() {
     if (!draftName.trim()) return;
-    setNewDrivers((prev) => [...prev, { name: draftName.trim(), nickname: "", carColour: draftColour }]);
+    setNewDrivers((prev) => [...prev, { name: draftName.trim(), nickname: "", carColour: draftColour, userId: draftUserId }]);
     setDraftName("");
+    setDraftUserId(null);
   }
 
   function removeNewDriver(idx: number) {
@@ -88,7 +92,7 @@ export default function NewChampionshipPage() {
           year,
           numberOfRaces,
           driverIds: Array.from(selected),
-          newDrivers: newDrivers.map((d) => ({ name: d.name, nickname: d.nickname || undefined, carColour: d.carColour })),
+          newDrivers: newDrivers.map((d) => ({ name: d.name, nickname: d.nickname || undefined, carColour: d.carColour, userId: d.userId || undefined })),
           tracks,
         }),
       });
@@ -170,6 +174,7 @@ export default function NewChampionshipPage() {
                 <div key={i} className="flex items-center gap-2 px-2.5 py-2 border border-volt/40 bg-volt/5">
                   <DriverAvatar name={d.name} carColour={d.carColour} avatarUrl={null} size={26} />
                   <span className="text-sm text-white flex-1">{d.name} · {d.carColour}</span>
+                  {d.userId && <span className="hud-tick text-volt-bright">Linked</span>}
                   <button type="button" onClick={() => removeNewDriver(i)} className="text-xs text-track-400 hover:text-signal-red">
                     Remove
                   </button>
@@ -180,16 +185,12 @@ export default function NewChampionshipPage() {
 
           <div className="flex gap-2 items-end border-t border-track-700 pt-4">
             <Field label="New driver name" className="flex-1">
-              <input
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                placeholder="Driver name"
-                className="input"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addDraftDriver();
-                  }
+              <UserLinkedNameField
+                name={draftName}
+                userId={draftUserId}
+                onChange={(n, uid) => {
+                  setDraftName(n);
+                  setDraftUserId(uid);
                 }}
               />
             </Field>
@@ -237,21 +238,6 @@ export default function NewChampionshipPage() {
           <span className="text-xs text-track-400">{totalDriverCount} driver{totalDriverCount === 1 ? "" : "s"} selected</span>
         </div>
       </form>
-
-      <style jsx global>{`
-        .input {
-          width: 100%;
-          background: #10141c;
-          border: 1px solid #2b3344;
-          padding: 0.55rem 0.75rem;
-          color: white;
-          font-size: 0.875rem;
-        }
-        .input:focus {
-          outline: none;
-          border-color: #ff5a1f;
-        }
-      `}</style>
     </div>
   );
 }
