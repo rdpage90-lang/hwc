@@ -36,9 +36,14 @@
   .pill {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono uppercase tracking-wideish border;
   }
+  .input {
+    @apply w-full bg-track-850 border border-track-600 px-3 py-2.5 text-white placeholder:text-track-500 text-sm;
+  }
+  .input:focus {
+    @apply outline-none border-heat;
+  }
 }
 
-/* Thin technical scrollbars for the standings table */
 .telemetry-scroll::-webkit-scrollbar {
   height: 6px;
 }
