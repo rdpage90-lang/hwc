@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, DriverAvatar } from "@/components/ui";
+import { UserLinkedNameField } from "@/components/UserLinkedNameField";
 
 interface Driver {
   id: string;
@@ -21,6 +22,7 @@ export function AddDriverForm({ championshipId, existingDriverIds }: { champions
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedId, setSelectedId] = useState("");
   const [newName, setNewName] = useState("");
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   const [newColour, setNewColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +38,10 @@ export function AddDriverForm({ championshipId, existingDriverIds }: { champions
     setError(null);
     setSubmitting(true);
     try {
-      const body = mode === "existing" ? { driverId: selectedId } : { newDriver: { name: newName, carColour: newColour } };
+      const body =
+        mode === "existing"
+          ? { driverId: selectedId }
+          : { newDriver: { name: newName, carColour: newColour, userId: newUserId || undefined } };
       if (mode === "existing" && !selectedId) throw new Error("Pick a driver to add.");
       if (mode === "new" && !newName.trim()) throw new Error("Give the new driver a name.");
 
@@ -51,6 +56,7 @@ export function AddDriverForm({ championshipId, existingDriverIds }: { champions
       setOpen(false);
       setSelectedId("");
       setNewName("");
+      setNewUserId(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't add that driver.");
@@ -108,7 +114,14 @@ export function AddDriverForm({ championshipId, existingDriverIds }: { champions
         <div className="flex gap-2 items-end">
           <label className="flex-1 block">
             <span className="hud-tick block mb-1.5">Name</span>
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full bg-track-850 border border-track-600 px-3 py-2 text-white text-sm" />
+            <UserLinkedNameField
+              name={newName}
+              userId={newUserId}
+              onChange={(n, uid) => {
+                setNewName(n);
+                setNewUserId(uid);
+              }}
+            />
           </label>
           <label className="block">
             <span className="hud-tick block mb-1.5">Colour</span>
