@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   if (activeChampionships.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 pt-10">
+      <div className="max-w-3xl mx-auto px-4 pt-10 space-y-6">
         <EmptyState
           title="No championship in progress"
           body={
@@ -28,6 +28,7 @@ export default async function DashboardPage() {
           }
           action={isAdmin ? <Button href="/championships/new">Create championship</Button> : undefined}
         />
+        <ReigningChampionCard />
       </div>
     );
   }
@@ -48,7 +49,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 pt-6 space-y-6">
-      {/* Hero */}
       <Link href={`/championships/${hero.id}`} className="block group">
         <div className="hud-card p-6 md:p-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-grid-fade pointer-events-none" />
@@ -84,8 +84,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      <ReigningChampionCard />
+
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Current standings */}
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg">Championship standings</h2>
@@ -110,7 +111,6 @@ export default async function DashboardPage() {
           </div>
         </Card>
 
-        {/* Recent result */}
         <Card>
           <h2 className="text-lg mb-4">Recent result</h2>
           {lastRace ? (
@@ -136,6 +136,34 @@ export default async function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+async function ReigningChampionCard() {
+  const lastCompleted = await db.championship.findFirst({
+    where: { status: "COMPLETED" },
+    orderBy: { completedAt: "desc" },
+  });
+  if (!lastCompleted || !lastCompleted.championDriverId) return null;
+
+  const champion = await db.driver.findUnique({ where: { id: lastCompleted.championDriverId } });
+  if (!champion) return null;
+
+  return (
+    <Link
+      href={`/championships/${lastCompleted.id}`}
+      className="hud-card p-4 flex items-center gap-4 hover:border-track-400 transition-colors group"
+    >
+      <div className="text-2xl shrink-0">🏆</div>
+      <DriverAvatar name={champion.name} carColour={champion.carColour} avatarUrl={champion.avatarUrl} size={40} />
+      <div className="flex-1 min-w-0">
+        <div className="hud-tick mb-0.5">Reigning champion · {lastCompleted.year}</div>
+        <div className="text-white font-display font-semibold truncate group-hover:text-heat-bright transition-colors">
+          {champion.name} <span className="text-track-400 font-normal">— {lastCompleted.name}</span>
+        </div>
+      </div>
+      <span className="text-track-500 shrink-0">→</span>
+    </Link>
   );
 }
 
