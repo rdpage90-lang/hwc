@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
+import { UserLinkedNameField } from "@/components/UserLinkedNameField";
 
 const CAR_COLOURS = ["Red", "Blue", "Yellow", "Green", "Orange", "Purple", "Black", "White", "Pink", "Cyan"];
 
@@ -10,6 +11,7 @@ export function NewDriverForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [carColour, setCarColour] = useState<string>(CAR_COLOURS[0] ?? "Red");
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +33,14 @@ export function NewDriverForm() {
       const res = await fetch("/api/drivers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, nickname: nickname || undefined, carColour }),
+        body: JSON.stringify({ name, nickname: nickname || undefined, carColour, userId: userId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Couldn't create that driver.");
       setOpen(false);
       setName("");
       setNickname("");
+      setUserId(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that driver.");
@@ -51,7 +54,14 @@ export function NewDriverForm() {
       <div className="grid sm:grid-cols-3 gap-3 mb-3">
         <label className="block sm:col-span-1">
           <span className="hud-tick block mb-1.5">Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-track-850 border border-track-600 px-3 py-2 text-white text-sm" />
+          <UserLinkedNameField
+            name={name}
+            userId={userId}
+            onChange={(n, uid) => {
+              setName(n);
+              setUserId(uid);
+            }}
+          />
         </label>
         <label className="block sm:col-span-1">
           <span className="hud-tick block mb-1.5">Nickname (optional)</span>
