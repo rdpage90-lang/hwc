@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
-import { DriverAvatar, EmptyState } from "@/components/ui";
+import { DriverAvatar, EmptyState, Badge } from "@/components/ui";
 import { NewDriverForm } from "@/components/NewDriverForm";
 
 export default async function DriversPage() {
   const [drivers, session] = await Promise.all([
-    db.driver.findMany({ orderBy: { name: "asc" }, include: { championships: true } }),
+    db.driver.findMany({
+      orderBy: { name: "asc" },
+      include: { championships: true, user: { select: { name: true } } },
+    }),
     auth(),
   ]);
   const isAdmin = session?.user.role === "ADMIN";
@@ -29,6 +32,7 @@ export default async function DriversPage() {
                 <div className="text-white text-sm">{d.name}</div>
                 {d.nickname && <div className="text-xs text-track-500">&ldquo;{d.nickname}&rdquo;</div>}
               </div>
+              {d.user && <Badge tone="volt">Linked · {d.user.name}</Badge>}
               <span className="text-xs text-track-500">{d.championships.length} championship{d.championships.length === 1 ? "" : "s"}</span>
             </Link>
           ))}

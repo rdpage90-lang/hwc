@@ -5,9 +5,6 @@ import { requireAdmin, requireUser } from "@/lib/session";
 import { createChampionshipSchema } from "@/lib/validations";
 import { defaultPointsSystem } from "@/lib/scoring";
 
-// GET /api/championships?status=ACTIVE — list championships, optionally
-// filtered by status. Dashboard uses ?status=ACTIVE, the archive page uses
-// ?status=COMPLETED.
 export async function GET(req: NextRequest) {
   return apiHandler(async () => {
     await requireUser();
@@ -26,9 +23,6 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST /api/championships — admin only. Creates the championship, its
-// driver roster (existing drivers + any brand-new ones in one step), and
-// the full race calendar, per the section 6 creation flow.
 export async function POST(req: NextRequest) {
   return apiHandler(async () => {
     await requireAdmin();
@@ -37,6 +31,15 @@ export async function POST(req: NextRequest) {
 
     if (input.driverIds.length === 0 && input.newDrivers.length === 0) {
       throw new DomainError("Add at least one driver before creating the championship.");
+    }
+
+    const requestedUserIds = input.newDrivers.map((nd) => nd.userId).filter((id): id is string => !!id);
+    if (new Set(requestedUserIds).size !== requestedUserIds.length) {
+      throw new DomainError("You've linked the same user to more than one new driver.");
+    }
+    if (requestedUserIds.length > 0) {
+      const alreadyLinked = await db.driver.findFirst({ where: { userId: { in: requestedUserIds } } });
+      if (alreadyLinked) throw new DomainError("One of these users is already linked to another driver.");
     }
 
     const pointsSystem = { ...defaultPointsSystem(), ...(input.pointsSystem ?? {}) };
@@ -52,14 +55,12 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Existing drivers selected from the roster
       for (const driverId of input.driverIds) {
         await tx.championshipDriver.create({
           data: { championshipId: created.id, driverId, joinedRound: 1 },
         });
       }
 
-      // Brand-new drivers created inline
       for (const nd of input.newDrivers) {
         const driver = await tx.driver.create({
           data: {
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
             nickname: nd.nickname || null,
             carColour: nd.carColour,
             avatarUrl: nd.avatarUrl || null,
+            userId: nd.userId || null,
           },
         });
         await tx.championshipDriver.create({
@@ -74,8 +76,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Race calendar — round 1 opens immediately, the rest stay locked
-      // until the previous round is completed (spec section 11).
       for (let round = 1; round <= input.numberOfRaces; round++) {
         await tx.race.create({
           data: {

@@ -7,11 +7,11 @@ import type {
   ResultStatus,
 } from "@prisma/client";
 
-// The points table stored as JSON on Championship.pointsSystem.
-// Keys "1".."N" are finishing-position points; "DNF" is the flat points a
-// DNF driver receives. DNS is intentionally not configurable — it is
-// always 0 (spec section 9) and is enforced in lib/scoring.ts.
 export type PointsSystem = Record<string, number>;
+
+export type DriverWithUser = Driver & {
+  user: { id: string; name: string } | null;
+};
 
 export type DriverWithMembership = Driver & {
   championshipDriver: ChampionshipDriver;
@@ -22,11 +22,10 @@ export type RaceWithResults = Race & {
 };
 
 export type ChampionshipFull = Championship & {
-  drivers: (ChampionshipDriver & { driver: Driver })[];
+  drivers: (ChampionshipDriver & { driver: DriverWithUser })[];
   races: RaceWithResults[];
 };
 
-// One row of the standings table.
 export interface StandingRow {
   driverId: string;
   driver: Driver;
@@ -38,8 +37,8 @@ export interface StandingRow {
   dnsCount: number;
   bestFinish: number | null;
   avgFinish: number | null;
-  perRound: (RoundCell | null)[]; // index 0 = round 1
-  position: number; // 1-based championship position after tie-break
+  perRound: (RoundCell | null)[];
+  position: number;
 }
 
 export type RoundCell =

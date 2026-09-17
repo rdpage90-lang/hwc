@@ -6,9 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl= env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -44,6 +44,7 @@ model User {
 
   submittedResults RaceResult[] @relation("ResultSubmittedBy")
   completedRaces   Race[]       @relation("RaceSubmittedBy")
+  driverProfile    Driver?
 
   @@map("users")
 }
@@ -58,6 +59,13 @@ model Driver {
   carColour String
   avatarUrl String?
   createdAt DateTime @default(now())
+
+  // Optional link to a real login account, so a driver's on-track record
+  // can be tied back to the person who actually plays them. Nullable
+  // because plenty of drivers (kids, guests, anyone without a login) will
+  // never have an account — those stay freeform, name-only.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 
   championships ChampionshipDriver[]
   results       RaceResult[]

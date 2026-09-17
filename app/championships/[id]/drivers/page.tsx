@@ -11,8 +11,6 @@ export default async function ChampionshipDriversPage({ params }: { params: { id
 
   const sorted = [...championship.drivers].sort((a, b) => a.driver.name.localeCompare(b.driver.name));
 
-  // Drivers with at least one result on record can't be removed (section
-  // 14's immutability principle extends to the roster, not just results).
   const driverIdsWithResults = new Set(championship.races.flatMap((r) => r.results.map((res) => res.driverId)));
 
   return (
@@ -26,6 +24,7 @@ export default async function ChampionshipDriversPage({ params }: { params: { id
                 <div className="text-white text-sm truncate">{cd.driver.name}</div>
                 {cd.driver.nickname && <div className="text-xs text-track-500 truncate">&ldquo;{cd.driver.nickname}&rdquo;</div>}
               </div>
+              {cd.driver.user && <Badge tone="volt">Linked · {cd.driver.user.name}</Badge>}
               {cd.joinedRound > 1 && <Badge tone="amber">Joined R{cd.joinedRound}</Badge>}
             </Link>
             {isAdmin && championship.status !== "COMPLETED" && !driverIdsWithResults.has(cd.driverId) && (

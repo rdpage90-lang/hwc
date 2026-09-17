@@ -5,6 +5,10 @@ export const createDriverSchema = z.object({
   nickname: z.string().trim().max(40).optional().nullable(),
   carColour: z.string().trim().min(1, "Car colour is required").max(30),
   avatarUrl: z.string().trim().url().optional().nullable().or(z.literal("")),
+  // Set when this driver is linked to a real login account (spec: "link to
+  // users so you can click through to a user's name, or manually enter if
+  // they aren't a user"). Left out/null for freeform, account-less drivers.
+  userId: z.string().cuid().optional().nullable(),
 });
 
 export const createChampionshipSchema = z.object({
