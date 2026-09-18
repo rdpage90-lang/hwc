@@ -30,7 +30,7 @@ export function DriverNumberEditor({
         {current !== null ? (
           <Badge tone="volt">#{String(current).padStart(2, "0")}</Badge>
         ) : (
-          <Badge tone="track">Set number</Badge>
+          <Badge tone="neutral">Set number</Badge>
         )}
       </button>
     );
