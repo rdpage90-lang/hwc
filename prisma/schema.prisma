@@ -104,9 +104,10 @@ model Championship {
   // ties are broken (spec section 17 & 26).
   championDriverId String?
 
-  drivers ChampionshipDriver[]
-  races   Race[]
-  teams   Team[]
+  drivers     ChampionshipDriver[]
+  races       Race[]
+  teams       Team[]
+  driverTeams ChampionshipDriverTeam[]
 
   @@map("championships")
 }
