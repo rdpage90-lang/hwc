@@ -1,5 +1,7 @@
-// HEAT World Championship (HWC) — V1 data model
-// See section 32-33 of the build spec for the reasoning behind this shape.
+// HEAT World Championship (HWC) — V1 data model, extended for V2 Phase 1
+// See section 32-33 of the V1 build spec for the reasoning behind the base
+// shape, and sections 7 & 10-11 of the V2 build spec for the additions
+// below (driver numbers, championship-specific teams).
 
 generator client {
   provider = "prisma-client-js"
@@ -60,6 +62,14 @@ model Driver {
   avatarUrl String?
   createdAt DateTime @default(now())
 
+  // V2: permanent HWC driver number (V2 spec section 7). Belongs to the
+  // driver, not any one championship. Nullable because existing V1 drivers
+  // won't have one yet — admin assigns during migration or later via admin
+  // settings (V2 spec section 42). Once set it should not change casually;
+  // that's an app-layer rule, not a DB one, so admin can still correct a
+  // mistake.
+  driverNumber Int? @unique
+
   // Optional link to a real login account, so a driver's on-track record
   // can be tied back to the person who actually plays them. Nullable
   // because plenty of drivers (kids, guests, anyone without a login) will
@@ -69,6 +79,7 @@ model Driver {
 
   championships ChampionshipDriver[]
   results       RaceResult[]
+  teams         ChampionshipDriverTeam[]
 
   @@map("drivers")
 }
@@ -95,6 +106,7 @@ model Championship {
 
   drivers ChampionshipDriver[]
   races   Race[]
+  teams   Team[]
 
   @@map("championships")
 }
@@ -115,6 +127,52 @@ model ChampionshipDriver {
 
   @@unique([championshipId, driverId])
   @@map("championship_drivers")
+}
+
+// V2: teams are championship-specific, never a permanent driver attribute
+// (V2 spec section 10). A driver can belong to a different team in every
+// championship they enter — team membership lives entirely on
+// ChampionshipDriverTeam below, keyed off this table's rows.
+model Team {
+  id             String   @id @default(cuid())
+  championshipId String
+  name           String
+  abbreviation   String
+  colour         String
+  logoUrl        String?
+  createdAt      DateTime @default(now())
+
+  championship Championship             @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  driverTeams  ChampionshipDriverTeam[]
+
+  // Lets ChampionshipDriverTeam take a composite FK on (teamId,
+  // championshipId), which is what guarantees a team can only ever be
+  // assigned within its own championship at the database level.
+  @@unique([id, championshipId])
+  @@map("teams")
+}
+
+// V2: the driver <-> team relationship for one championship. One row per
+// driver per championship (V2 spec section 10) — the unique constraint
+// below is what enforces "one team per driver per championship" at the DB
+// level. "Team must belong to the same championship" is enforced by the
+// composite FK on team; "driver must be registered for the championship"
+// is enforced by the enforce_driver_registered_for_team trigger added in
+// v2_triggers_addition.sql, matching how race_results immutability is
+// already trigger-enforced rather than relying on app code alone.
+model ChampionshipDriverTeam {
+  id             String   @id @default(cuid())
+  championshipId String
+  driverId       String
+  teamId         String
+  createdAt      DateTime @default(now())
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  driver       Driver       @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  team         Team         @relation(fields: [teamId, championshipId], references: [id, championshipId], onDelete: Cascade)
+
+  @@unique([championshipId, driverId])
+  @@map("championship_driver_teams")
 }
 
 model Race {
