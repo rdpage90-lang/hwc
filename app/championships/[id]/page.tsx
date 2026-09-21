@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { getChampionshipFull } from "@/lib/championship";
 import { computeStandings } from "@/lib/scoring";
+import { auth } from "@/auth";
 import { Card, DriverAvatar, PositionMark, Button } from "@/components/ui";
 import { ChampionshipProgress } from "@/components/ChampionshipProgress";
+import { TeamManagement } from "@/components/TeamManagement";
 
 export default async function ChampionshipOverviewPage({ params }: { params: { id: string } }) {
-  const championship = await getChampionshipFull(params.id);
+  const [championship, session] = await Promise.all([getChampionshipFull(params.id), auth()]);
+  const isAdmin = session?.user.role === "ADMIN";
   const standings = computeStandings(championship);
   const leader = standings[0];
   const nextRace = championship.races.find((r) => r.status === "OPEN");
@@ -95,6 +98,8 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
           ))}
         </div>
       </Card>
+
+      <TeamManagement championshipId={championship.id} isAdmin={!!isAdmin} />
     </div>
   );
 }
