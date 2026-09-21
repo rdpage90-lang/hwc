@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { apiHandler, DomainError } from "@/lib/api";
+import { apiHandler } from "@/lib/api";
+import { requireAdmin } from "@/lib/session";
 
 // V2 migration path for existing V1 drivers (V2 spec section 42):
 // "If no number is known, temporary unique numbers can be assigned and
@@ -10,10 +10,7 @@ import { apiHandler, DomainError } from "@/lib/api";
 // a no-op once nothing is unassigned.
 export async function POST() {
   return apiHandler(async () => {
-    const session = await auth();
-    if (!session || session.user.role !== "ADMIN") {
-      throw new DomainError("Admin access required", 403);
-    }
+    await requireAdmin();
 
     const unassigned = await db.driver.findMany({
       where: { driverNumber: null },
