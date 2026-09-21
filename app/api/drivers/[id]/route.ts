@@ -3,8 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiHandler, DomainError } from "@/lib/api";
-import { requireUser } from "@/lib/session";
-import { auth } from "@/auth";
+import { requireUser, requireAdmin } from "@/lib/session";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
@@ -36,12 +35,7 @@ const updateDriverSchema = z.object({
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   return apiHandler(async () => {
-    // NOTE: inlined admin check — swap for your existing requireAdmin()
-    // helper if you have one, for consistency with the rest of the app.
-    const session = await auth();
-    if (!session || session.user.role !== "ADMIN") {
-      throw new DomainError("Admin access required", 403);
-    }
+    await requireAdmin();
 
     const body = updateDriverSchema.parse(await req.json());
 
