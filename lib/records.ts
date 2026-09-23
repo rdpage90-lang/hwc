@@ -111,10 +111,18 @@ async function getChampionshipLeadAndMarginRecords(): Promise<LeadMarginResult> 
 
     if (full.status === "COMPLETED") {
       const finalStandings = computeStandings(full);
-      if (finalStandings.length >= 2) {
-        const margin = finalStandings[0].points - finalStandings[1].points;
+      const winner = finalStandings[0];
+      const runnerUp = finalStandings[1];
+      
+      if (winner && runnerUp) {
+        const margin = winner.points - runnerUp.points;
+        
         if (!bestMargin || margin > bestMargin.margin) {
-          bestMargin = { driverId: finalStandings[0].driverId, championshipId: c.id, margin };
+          bestMargin = { 
+            driverId: winner.driverId, 
+            championshipId: c.id, 
+            margin,
+          };
         }
       }
     }
