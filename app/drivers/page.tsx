@@ -19,9 +19,14 @@ export default async function DriversPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 pt-6 space-y-6">
-      <div>
-        <h1 className="text-2xl">Drivers</h1>
-        <p className="text-sm text-track-400 mt-1">Every driver who's ever taken the grid, across every championship.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl">Drivers</h1>
+          <p className="text-sm text-track-400 mt-1">Every driver who's ever taken the grid, across every championship.</p>
+        </div>
+        <Link href="/drivers/leaderboard" className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish whitespace-nowrap shrink-0 mt-1">
+          All-time standings →
+        </Link>
       </div>
 
       {isAdmin && <AssignTemporaryNumbersButton unassignedCount={unassignedCount} />}
