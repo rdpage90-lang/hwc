@@ -1,19 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getDriverCareerStats, getDriverPointsByChampionship } from "@/lib/career";
+import { getDriverCareerStats, getDriverChampionshipHistory } from "@/lib/career";
 import { DriverAvatar, Badge, EmptyState } from "@/components/ui";
 
 export default async function DriverPage({ params }: { params: { id: string } }) {
-  const driver = await db.driver.findUnique({
-    where: { id: params.id },
-    include: { championships: { include: { championship: true }, orderBy: { joinedAt: "desc" } } },
-  });
+  const driver = await db.driver.findUnique({ where: { id: params.id } });
   if (!driver) notFound();
 
-  const [career, pointsByChampionship] = await Promise.all([
+  const [career, history] = await Promise.all([
     getDriverCareerStats(driver.id),
-    getDriverPointsByChampionship(driver.id),
+    getDriverChampionshipHistory(driver.id),
   ]);
 
   return (
@@ -45,34 +42,37 @@ export default async function DriverPage({ params }: { params: { id: string } })
 
       <div>
         <h2 className="text-lg mb-3">Championships</h2>
-        {driver.championships.length === 0 ? (
+        {history.length === 0 ? (
           <EmptyState title="No championships yet" body="This driver hasn't been added to a championship yet." />
         ) : (
           <div className="hud-card divide-y divide-track-800">
-            {driver.championships.map((cd) => {
-              const isChampion = cd.championship.championDriverId === driver.id;
-              const points = pointsByChampionship.get(cd.championshipId) ?? 0;
-              return (
-                <Link
-                  key={cd.championshipId}
-                  href={`/championships/${cd.championshipId}/drivers/${driver.id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-track-800/40 transition-colors"
-                >
-                  <div>
-                    <div className="text-white text-sm">{cd.championship.name}</div>
-                    <div className="hud-tick mt-0.5">
-                      {cd.championship.year} · {points} PTS
-                    </div>
+            {history.map((h) => (
+              <Link
+                key={h.championshipId}
+                href={`/championships/${h.championshipId}/drivers/${driver.id}`}
+                className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-track-800/40 transition-colors"
+              >
+                <div>
+                  <div className="text-white text-sm">{h.championship.name}</div>
+                  <div className="hud-tick mt-0.5">
+                    {h.championship.year}
+                    {h.position != null && (
+                      <>
+                        {" · "}P{h.position} of {h.totalDrivers}
+                      </>
+                    )}
+                    {" · "}
+                    {h.points} PTS
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isChampion && <Badge tone="volt">Champion</Badge>}
-                    <Badge tone={cd.championship.status === "ACTIVE" ? "heat" : cd.championship.status === "COMPLETED" ? "amber" : "neutral"}>
-                      {cd.championship.status}
-                    </Badge>
-                  </div>
-                </Link>
-              );
-            })}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {h.isChampion && <Badge tone="volt">Champion</Badge>}
+                  <Badge tone={h.championship.status === "ACTIVE" ? "heat" : h.championship.status === "COMPLETED" ? "amber" : "neutral"}>
+                    {h.championship.status}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
