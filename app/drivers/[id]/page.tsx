@@ -1,90 +1,58 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getDriverCareerStats, getDriverChampionshipHistory } from "@/lib/career";
-import { DriverAvatar, Badge, EmptyState } from "@/components/ui";
+import { auth } from "@/auth";
+import { DriverAvatar, EmptyState, Badge } from "@/components/ui";
+import { NewDriverForm } from "@/components/NewDriverForm";
+import { DriverNumberEditor } from "@/components/DriverNumberEditor";
+import { AssignTemporaryNumbersButton } from "@/components/AssignTemporaryNumbersButton";
 
-export default async function DriverPage({ params }: { params: { id: string } }) {
-  const driver = await db.driver.findUnique({ where: { id: params.id } });
-  if (!driver) notFound();
-
-  const [career, history] = await Promise.all([
-    getDriverCareerStats(driver.id),
-    getDriverChampionshipHistory(driver.id),
+export default async function DriversPage() {
+  const [drivers, session] = await Promise.all([
+    db.driver.findMany({
+      orderBy: { name: "asc" },
+      include: { championships: true, user: { select: { name: true } } },
+    }),
+    auth(),
   ]);
+  const isAdmin = session?.user.role === "ADMIN";
+  const unassignedCount = drivers.filter((d) => d.driverNumber === null).length;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-6 space-y-6">
-      <div className="hud-card p-6 flex items-center gap-5">
-        <DriverAvatar name={driver.name} carColour={driver.carColour} avatarUrl={driver.avatarUrl} size={64} />
+    <div className="max-w-3xl mx-auto px-4 pt-6 space-y-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl text-white">{driver.name}</h1>
-            {driver.driverNumber != null && <Badge tone="volt">#{String(driver.driverNumber).padStart(2, "0")}</Badge>}
-          </div>
-          {driver.nickname && <div className="text-sm text-track-400">&ldquo;{driver.nickname}&rdquo;</div>}
+          <h1 className="text-2xl">Drivers</h1>
+          <p className="text-sm text-track-400 mt-1">Every driver who's ever taken the grid, across every championship.</p>
         </div>
+        <Link href="/drivers/leaderboard" className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish whitespace-nowrap shrink-0 mt-1">
+          All-time standings →
+        </Link>
       </div>
 
-      <div>
-        <h2 className="text-lg mb-3">Career</h2>
-        <div className="hud-card grid grid-cols-2 sm:grid-cols-4 divide-x divide-track-800">
-          <CareerStat label="Career points" value={career.points} />
-          <CareerStat label="Championships won" value={career.championshipsWon} />
-          <CareerStat label="Wins" value={career.wins} />
-          <CareerStat label="Podiums" value={career.podiums} />
-          <CareerStat label="Starts" value={career.starts} />
-          <CareerStat label="Best finish" value={career.bestFinish != null ? `P${career.bestFinish}` : "—"} />
-          <CareerStat label="Avg finish" value={career.avgFinish != null ? career.avgFinish.toFixed(1) : "—"} />
-          <CareerStat label="Championships entered" value={career.championshipsEntered} />
-        </div>
-      </div>
+      {isAdmin && <AssignTemporaryNumbersButton unassignedCount={unassignedCount} />}
 
-      <div>
-        <h2 className="text-lg mb-3">Championships</h2>
-        {history.length === 0 ? (
-          <EmptyState title="No championships yet" body="This driver hasn't been added to a championship yet." />
-        ) : (
-          <div className="hud-card divide-y divide-track-800">
-            {history.map((h) => (
-              <Link
-                key={h.championshipId}
-                href={`/championships/${h.championshipId}/drivers/${driver.id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-track-800/40 transition-colors"
-              >
-                <div>
-                  <div className="text-white text-sm">{h.championship.name}</div>
-                  <div className="hud-tick mt-0.5">
-                    {h.championship.year}
-                    {h.position != null && (
-                      <>
-                        {" · "}P{h.position} of {h.totalDrivers}
-                      </>
-                    )}
-                    {" · "}
-                    {h.points} PTS
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {h.isChampion && <Badge tone="volt">Champion</Badge>}
-                  <Badge tone={h.championship.status === "ACTIVE" ? "heat" : h.championship.status === "COMPLETED" ? "amber" : "neutral"}>
-                    {h.championship.status}
-                  </Badge>
+      {drivers.length === 0 ? (
+        <EmptyState title="No drivers yet" body="Drivers are usually added while creating a championship, but you can also add one here." />
+      ) : (
+        <div className="hud-card divide-y divide-track-800">
+          {drivers.map((d) => (
+            <div key={d.id} className="flex items-center gap-3 px-4 py-3 hover:bg-track-800/40 transition-colors">
+              <Link href={`/drivers/${d.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                <DriverAvatar name={d.name} carColour={d.carColour} avatarUrl={d.avatarUrl} size={32} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-white text-sm">{d.name}</div>
+                  {d.nickname && <div className="text-xs text-track-500">&ldquo;{d.nickname}&rdquo;</div>}
                 </div>
               </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+              <DriverNumberEditor driverId={d.id} driverNumber={d.driverNumber} isAdmin={isAdmin} />
+              {d.user && <Badge tone="volt">Linked · {d.user.name}</Badge>}
+              <span className="text-xs text-track-500">{d.championships.length} championship{d.championships.length === 1 ? "" : "s"}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-function CareerStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="px-4 py-3.5">
-      <div className="stat-figure text-white text-xl font-semibold">{value}</div>
-      <div className="hud-tick mt-1">{label}</div>
+      {isAdmin && <NewDriverForm />}
     </div>
   );
 }
