@@ -4,10 +4,7 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   if (!req.auth) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
-    const callbackUrl = req.nextUrl.pathname + req.nextUrl.search;
-
-    loginUrl.searchParams.set("callbackUrl", callbackUrl);
-
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
