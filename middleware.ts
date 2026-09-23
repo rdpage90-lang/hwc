@@ -1,9 +1,21 @@
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-export function middleware() {
+export default auth((req) => {
+  if (!req.auth) {
+    const loginUrl = new URL("/login", req.nextUrl.origin);
+    const callbackUrl = req.nextUrl.pathname + req.nextUrl.search;
+
+    loginUrl.searchParams.set("callbackUrl", callbackUrl);
+
+    return NextResponse.redirect(loginUrl);
+  }
+
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)",
+  ],
 };
