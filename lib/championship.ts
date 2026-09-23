@@ -11,6 +11,15 @@ const fullInclude = {
     include: { results: { include: { driver: true } } },
     orderBy: { roundNumber: "asc" as const },
   },
+  // V2: championship-scoped teams, plus every driver's team assignment for
+  // this championship. Cheap to always include — most championships will
+  // have zero or a handful of teams, and computeConstructorStandings
+  // already treats an empty teams array as "no constructors' table yet"
+  // rather than an error.
+  teams: {
+    orderBy: { name: "asc" as const },
+  },
+  driverTeams: true,
 };
 
 export async function getChampionshipFull(id: string): Promise<ChampionshipFull> {
