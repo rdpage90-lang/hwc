@@ -1,5 +1,7 @@
 import type { RaceResult } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getChampionshipFull } from "@/lib/championship";
+import { computeStandings } from "@/lib/scoring";
 
 export interface CareerStats {
   points: number;
@@ -18,6 +20,18 @@ export interface CareerLeaderboardRow extends CareerStats {
   driverId: string;
   driver: { id: string; name: string; nickname: string | null; carColour: string; avatarUrl: string | null; driverNumber: number | null };
   position: number;
+}
+
+export interface DriverChampionshipHistoryRow {
+  championshipId: string;
+  championship: { id: string; name: string; year: number; status: string };
+  points: number;
+  /** Tie-broken finishing position from computeStandings — null only if
+   *  the driver was somehow removed from a championship's driver list
+   *  after joining, which shouldn't happen but is guarded against. */
+  position: number | null;
+  totalDrivers: number;
+  isChampion: boolean;
 }
 
 /**
@@ -90,30 +104,58 @@ export async function getDriverCareerStats(driverId: string): Promise<CareerStat
 }
 
 /**
- * Per-championship point total for one driver, keyed by championshipId —
- * used by the driver profile page's championship history list. Not a
- * finishing position (that needs the full tie-broken standings for each
- * championship); just "how many points did they score here."
+ * Every championship a driver has entered, with their actual tie-broken
+ * finishing position in each — not just a points total. Runs
+ * computeStandings per championship (same function the championship
+ * overview page uses), so a driver's position here can never disagree
+ * with that championship's own standings table.
+ *
+ * Fine at this app's scale (a driver's career is a handful to a few dozen
+ * championships, not thousands) — if that stops being true, this is the
+ * one place to add caching.
  */
-export async function getDriverPointsByChampionship(driverId: string): Promise<Map<string, number>> {
-  const results = await db.raceResult.findMany({
+export async function getDriverChampionshipHistory(driverId: string): Promise<DriverChampionshipHistoryRow[]> {
+  const memberships = await db.championshipDriver.findMany({
     where: { driverId },
-    select: { championshipPoints: true, race: { select: { championshipId: true } } },
+    include: { championship: true },
+    orderBy: { joinedAt: "desc" },
   });
 
-  const totals = new Map<string, number>();
-  for (const result of results) {
-    const championshipId = result.race.championshipId;
-    totals.set(championshipId, (totals.get(championshipId) ?? 0) + result.championshipPoints);
-  }
-  return totals;
+  return Promise.all(
+    memberships.map(async (m) => {
+      const full = await getChampionshipFull(m.championshipId);
+      const standings = computeStandings(full);
+      const row = standings.find((s) => s.driverId === driverId);
+
+      return {
+        championshipId: m.championshipId,
+        championship: {
+          id: m.championship.id,
+          name: m.championship.name,
+          year: m.championship.year,
+          status: m.championship.status,
+        },
+        points: row?.points ?? 0,
+        position: row?.position ?? null,
+        totalDrivers: standings.length,
+        isChampion: m.championship.championDriverId === driverId,
+      };
+    }),
+  );
 }
 
-/** All-time HWC Career Standings — every driver ranked by career stats. */
+/**
+ * All-time HWC Career Standings — every driver who has actually started a
+ * race, ranked by career points. Drivers who exist on the roster or are
+ * registered for an upcoming championship but have never started a race
+ * are left off deliberately (matches "every driver who's ever taken the
+ * grid" — registering isn't taking the grid, starting is).
+ */
 export async function getCareerLeaderboard(): Promise<CareerLeaderboardRow[]> {
   const [drivers, championshipWins] = await Promise.all([
     db.driver.findMany({
       include: { results: true, championships: true },
+      orderBy: { name: "asc" }, // deterministic base order before sort/tie-break
     }),
     db.championship.findMany({
       where: { status: "COMPLETED", championDriverId: { not: null } },
@@ -127,28 +169,34 @@ export async function getCareerLeaderboard(): Promise<CareerLeaderboardRow[]> {
     winsByDriverId.set(id, (winsByDriverId.get(id) ?? 0) + 1);
   }
 
-  const rows: CareerLeaderboardRow[] = drivers.map((driver) => ({
-    driverId: driver.id,
-    driver: {
-      id: driver.id,
-      name: driver.name,
-      nickname: driver.nickname,
-      carColour: driver.carColour,
-      avatarUrl: driver.avatarUrl,
-      driverNumber: driver.driverNumber,
-    },
-    ...aggregateResults(driver.results),
-    championshipsEntered: driver.championships.length,
-    championshipsWon: winsByDriverId.get(driver.id) ?? 0,
-    position: 0, // resolved below
-  }));
+  const rows: CareerLeaderboardRow[] = drivers
+    .map((driver) => ({
+      driverId: driver.id,
+      driver: {
+        id: driver.id,
+        name: driver.name,
+        nickname: driver.nickname,
+        carColour: driver.carColour,
+        avatarUrl: driver.avatarUrl,
+        driverNumber: driver.driverNumber,
+      },
+      ...aggregateResults(driver.results),
+      championshipsEntered: driver.championships.length,
+      championshipsWon: winsByDriverId.get(driver.id) ?? 0,
+      position: 0, // resolved below
+    }))
+    .filter((row) => row.starts > 0);
 
   rows.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.championshipsWon !== a.championshipsWon) return b.championshipsWon - a.championshipsWon;
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.podiums !== a.podiums) return b.podiums - a.podiums;
-    return a.driver.name.localeCompare(b.driver.name);
+    const nameCompare = a.driver.name.localeCompare(b.driver.name);
+    if (nameCompare !== 0) return nameCompare;
+    // Final fallback for two identically-named, identically-statted
+    // drivers — guarantees a stable order across requests.
+    return a.driverId.localeCompare(b.driverId);
   });
   rows.forEach((row, i) => {
     row.position = i + 1;
