@@ -6,7 +6,7 @@ export default auth((req) => {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
 
-    console.log("FINAL LOGIN URL:", loginUrl.toString());
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
