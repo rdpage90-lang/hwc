@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   if (!req.auth) {
-    const loginUrl = new URL("/login", req.nextUrl.origin);
-    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    const url = new URL(req.url);
+    url.pathname = "/login";
+    url.search = `callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`;
 
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
