@@ -24,7 +24,7 @@ export default async function DriversPage() {
           <h1 className="text-2xl">Drivers</h1>
           <p className="text-sm text-track-400 mt-1">Every driver who's ever taken the grid, across every championship.</p>
         </div>
-        <Link href="/drivers/leaderboard" className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish whitespace-nowrap shrink-0 mt-1">
+        <Link href="/stats/leaderboard" className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish whitespace-nowrap shrink-0 mt-1">
           All-time standings →
         </Link>
       </div>
