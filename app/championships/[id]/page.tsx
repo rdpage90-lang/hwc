@@ -79,9 +79,14 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg">Standings</h2>
-          <Link href={`/championships/${championship.id}/standings`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
-            Full table →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href={`/championships/${championship.id}/progression`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+              Progression →
+            </Link>
+            <Link href={`/championships/${championship.id}/standings`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+              Full table →
+            </Link>
+          </div>
         </div>
         <div className="space-y-1">
           {standings.slice(0, 8).map((row) => (
