@@ -131,6 +131,17 @@ export async function getAllDriverStreaks(): Promise<DriverStreaksRow[]> {
  * comparisons are built, at which point this is the function that page
  * calls.
  */
+/**
+ * V2 spec section 22: "consecutive races finishing ahead of a rival."
+ * Inherently a two-driver comparison rather than a standalone streak, so
+ * it isn't surfaced anywhere on its own — lib/head-to-head.ts calls this
+ * directly. Race-inclusion rule matches the head-to-head page exactly
+ * (V2 spec section 9): a DNS means a driver never took the start, so any
+ * race where either driver DNS'd is excluded from the comparison
+ * entirely, not just from who's "ahead." A classified finish always beats
+ * a DNF; between two DNFs there's no ordering in the stored data, so
+ * neither side is credited for that race.
+ */
 export async function getConsecutiveAheadOfRivalStreak(
   driverId: string,
   rivalId: string,
@@ -152,29 +163,29 @@ export async function getConsecutiveAheadOfRivalStreak(
   ]);
 
   const rivalByRaceId = new Map(rivalResults.map((r) => [r.raceId, r]));
-  const rank = (status: ResultStatus) => (status === "FINISHED" ? 0 : status === "DNF" ? 1 : 2);
 
-  const sharedRaces = driverResults
-    .filter((r) => rivalByRaceId.has(r.raceId))
-    .map((r) => ({
+  const sharedRaces: { year: number; createdAt: Date; round: number; driver: (typeof driverResults)[number]; rival: (typeof rivalResults)[number] }[] = [];
+  for (const r of driverResults) {
+    if (r.resultStatus === "DNS") continue;
+    const rival = rivalByRaceId.get(r.raceId);
+    if (!rival || rival.resultStatus === "DNS") continue;
+    sharedRaces.push({
       year: r.race.championship.year,
       createdAt: r.race.championship.createdAt,
       round: r.race.roundNumber,
       driver: r,
-      rival: rivalByRaceId.get(r.raceId)!,
-    }))
-    .sort((a, b) => a.year - b.year || a.createdAt.getTime() - b.createdAt.getTime() || a.round - b.round);
+      rival,
+    });
+  }
+  sharedRaces.sort((a, b) => a.year - b.year || a.createdAt.getTime() - b.createdAt.getTime() || a.round - b.round);
 
   let longest = 0;
   let running = 0;
   for (const race of sharedRaces) {
-    const driverRank = rank(race.driver.resultStatus);
-    const rivalRank = rank(race.rival.resultStatus);
-    const driverAhead =
-      driverRank !== rivalRank
-        ? driverRank < rivalRank
-        : race.driver.resultStatus === "FINISHED" &&
-          (race.driver.finishingPosition ?? 99) < (race.rival.finishingPosition ?? 99);
+    const driverFinished = race.driver.resultStatus === "FINISHED" && race.driver.finishingPosition != null;
+    const rivalFinished = race.rival.resultStatus === "FINISHED" && race.rival.finishingPosition != null;
+
+    const driverAhead = driverFinished && (!rivalFinished || (race.driver.finishingPosition as number) < (race.rival.finishingPosition as number));
 
     if (driverAhead) {
       running += 1;
