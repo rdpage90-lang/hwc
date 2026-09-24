@@ -1,22 +1,37 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
+import { STATS_LINKS } from "@/lib/stats-nav";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
   { href: "/championships", label: "Championships", icon: FlagIcon },
   { href: "/drivers", label: "Drivers", icon: DriverIcon },
-  { href: "/archive", label: "Archive", icon: ArchiveIcon },
 ];
 
 export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) {
   const pathname = usePathname();
-  const links = role === "ADMIN" ? [...LINKS, { href: "/admin/users", label: "Admin", icon: AdminIcon }] : LINKS;
+  const [statsOpen, setStatsOpen] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  const adminLink = role === "ADMIN" ? { href: "/admin/users", label: "Admin", icon: AdminIcon } : null;
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isStatsActive = isActive("/stats") || STATS_LINKS.some((l) => isActive(l.href));
+
+  // Close the dropdown on outside click and on navigation.
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (statsRef.current && !statsRef.current.contains(e.target as Node)) setStatsOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+  useEffect(() => setStatsOpen(false), [pathname]);
 
   return (
     <>
@@ -28,7 +43,7 @@ export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) 
             <span className="hud-tick hidden lg:inline">// HEAT WORLD CHAMPIONSHIP</span>
           </Link>
           <nav className="flex items-center gap-1">
-            {links.map((l) => (
+            {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -42,6 +57,50 @@ export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) 
                 {l.label}
               </Link>
             ))}
+
+            <div className="relative" ref={statsRef}>
+              <button
+                type="button"
+                onClick={() => setStatsOpen((v) => !v)}
+                className={clsx(
+                  "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-b-2",
+                  isStatsActive
+                    ? "text-white border-heat"
+                    : "text-track-400 border-transparent hover:text-track-300 hover:border-track-600",
+                )}
+              >
+                Stats
+                <ChevronIcon className={clsx("transition-transform", statsOpen && "rotate-180")} />
+              </button>
+              {statsOpen && (
+                <div className="absolute left-0 top-full mt-1 w-64 bg-track-900 border border-track-700 shadow-lg py-1 z-50">
+                  {STATS_LINKS.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className={clsx("block px-3 py-2.5 hover:bg-track-800/60 transition-colors", isActive(l.href) ? "text-white" : "text-track-300")}
+                    >
+                      <div className="text-sm">{l.label}</div>
+                      <div className="text-xs text-track-500 mt-0.5">{l.description}</div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {adminLink && (
+              <Link
+                href={adminLink.href}
+                className={clsx(
+                  "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+                  isActive(adminLink.href)
+                    ? "text-white border-heat"
+                    : "text-track-400 border-transparent hover:text-track-300 hover:border-track-600",
+                )}
+              >
+                {adminLink.label}
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-4">
@@ -55,9 +114,9 @@ export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) 
         </div>
       </header>
 
-      {/* Mobile bottom bar */}
+      {/* Mobile bottom bar — no dropdown room, so Stats just links to the hub page */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-track-950/95 backdrop-blur border-t border-track-700 flex items-stretch">
-        {links.map((l) => {
+        {LINKS.map((l) => {
           const Icon = l.icon;
           return (
             <Link
@@ -73,6 +132,28 @@ export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) 
             </Link>
           );
         })}
+        <Link
+          href="/stats"
+          className={clsx(
+            "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-mono uppercase tracking-wideish",
+            isStatsActive ? "text-heat" : "text-track-400",
+          )}
+        >
+          <StatsIcon active={isStatsActive} />
+          Stats
+        </Link>
+        {adminLink && (
+          <Link
+            href={adminLink.href}
+            className={clsx(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-mono uppercase tracking-wideish",
+              isActive(adminLink.href) ? "text-heat" : "text-track-400",
+            )}
+          >
+            <AdminIcon active={isActive(adminLink.href)} />
+            {adminLink.label}
+          </Link>
+        )}
       </nav>
     </>
   );
@@ -104,12 +185,19 @@ function DriverIcon({ active }: { active?: boolean }) {
     </svg>
   );
 }
-function ArchiveIcon({ active }: { active?: boolean }) {
+function StatsIcon({ active }: { active?: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8}>
-      <rect x="3" y="4" width="18" height="4" />
-      <path d="M5 8v11h14V8" />
-      <path d="M10 12h4" />
+      <path d="M4 20V10" />
+      <path d="M12 20V4" />
+      <path d="M20 20v-7" />
+    </svg>
+  );
+}
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
