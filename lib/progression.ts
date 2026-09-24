@@ -65,7 +65,7 @@ export function getChampionshipProgression(championship: ChampionshipFull): Cham
     currentLeaderId = leader.driverId;
 
     if (snap.standings.length >= 2) {
-      const margin = leader.points - snap.standings[1].points;
+      const margin = leader.points - snap.standings[1]!.points;
       if (!largestLead || margin > largestLead.margin) {
         largestLead = { driverId: leader.driverId, margin, round: snap.round };
       }
