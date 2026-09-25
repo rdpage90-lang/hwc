@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
 
@@ -19,6 +19,15 @@ export function DriverNumberEditor({
   const [current, setCurrent] = useState(driverNumber);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // `current` starts as a copy of the driverNumber prop, but useState's
+  // initial value is only used on first mount — without this, a
+  // server-side refresh triggered elsewhere on the page (e.g. the bulk
+  // "assign temporary numbers" action) updates the prop but this
+  // component keeps showing its stale local copy until a full reload.
+  useEffect(() => {
+    setCurrent(driverNumber);
+  }, [driverNumber]);
 
   if (!isAdmin) {
     return current !== null ? <Badge tone="volt">#{String(current).padStart(2, "0")}</Badge> : null;
