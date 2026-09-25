@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
 export function AssignTemporaryNumbersButton({ unassignedCount }: { unassignedCount: number }) {
   const router = useRouter();
@@ -35,14 +36,9 @@ export function AssignTemporaryNumbersButton({ unassignedCount }: { unassignedCo
           Assign temporary numbers now — edit any of them individually afterward.
         </div>
       </div>
-      <button
-        type="button"
-        onClick={run}
-        disabled={loading}
-        className="text-xs px-3 py-1.5 rounded bg-volt-500 text-track-950 hover:bg-volt-400 disabled:opacity-50 whitespace-nowrap"
-      >
+      <Button size="sm" onClick={run} disabled={loading}>
         {loading ? "Assigning…" : "Assign temporary numbers"}
-      </button>
+      </Button>
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>
   );
