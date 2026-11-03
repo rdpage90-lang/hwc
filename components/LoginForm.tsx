@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -85,6 +86,11 @@ export function LoginForm() {
         </form>
 
         <p className="text-center text-xs text-track-500 mt-6">
+          <Link href="/reset-password" className="hover:text-white transition-colors">
+            Forgot your password?
+          </Link>
+        </p>
+        <p className="text-center text-xs text-track-500 mt-3">
           Ask your championship admin if you need an account.
         </p>
       </div>

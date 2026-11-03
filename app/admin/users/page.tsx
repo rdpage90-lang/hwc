@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui";
 import { NewUserForm } from "@/components/NewUserForm";
+import { ResetUserPassword } from "@/components/ResetUserPassword";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -22,12 +23,13 @@ export default async function AdminUsersPage() {
 
       <div className="hud-card divide-y divide-track-800">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between gap-4 px-4 py-3">
-            <div>
+          <div key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+            <div className="flex-1 min-w-0">
               <div className="text-white text-sm">{u.name}</div>
-              <div className="text-xs text-track-500">{u.email}</div>
+              <div className="text-xs text-track-500 truncate">{u.email}</div>
             </div>
             <Badge tone={u.role === "ADMIN" ? "heat" : "neutral"}>{u.role}</Badge>
+            <ResetUserPassword userId={u.id} userName={u.name} />
           </div>
         ))}
       </div>
