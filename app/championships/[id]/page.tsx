@@ -5,12 +5,15 @@ import { auth } from "@/auth";
 import { Card, DriverAvatar, PositionMark, Button } from "@/components/ui";
 import { ChampionshipProgress } from "@/components/ChampionshipProgress";
 import { TeamManagement } from "@/components/TeamManagement";
+import { TeamTag } from "@/components/TeamTag";
+import { getTeamByDriverId } from "@/lib/championship-teams";
 
 export default async function ChampionshipOverviewPage({ params }: { params: { id: string } }) {
   const [championship, session] = await Promise.all([getChampionshipFull(params.id), auth()]);
   const isAdmin = session?.user.role === "ADMIN";
   const standings = computeStandings(championship);
   const constructorStandings = computeConstructorStandings(championship);
+  const teamByDriverId = getTeamByDriverId(championship);
   const leader = standings[0];
   const nextRace = championship.races.find((r) => r.status === "OPEN");
   const lastRace = [...championship.races].reverse().find((r) => r.status === "COMPLETED");
@@ -98,6 +101,7 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
               <span className="w-5 stat-figure text-track-400 text-sm">{row.position}</span>
               <DriverAvatar name={row.driver.name} carColour={row.driver.carColour} avatarUrl={row.driver.avatarUrl} size={28} />
               <span className="flex-1 text-sm text-white truncate">{row.driver.nickname || row.driver.name}</span>
+              {teamByDriverId.get(row.driverId) && <TeamTag team={teamByDriverId.get(row.driverId)!} className="shrink-0" />}
               <span className="stat-figure text-white font-semibold">{row.points}</span>
               <span className="hud-tick w-10 text-right">PTS</span>
             </Link>
@@ -113,7 +117,7 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
               <div key={row.teamId} className="flex items-center gap-3 py-2 px-2 -mx-2">
                 <span className="w-5 stat-figure text-track-400 text-sm">{row.position}</span>
                 <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-track-600"
                   style={{ backgroundColor: row.team.colour.toLowerCase() }}
                   aria-hidden
                 />
