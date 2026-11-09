@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { getChampionshipFull } from "@/lib/championship";
-import { computeStandings } from "@/lib/scoring";
+import { computeStandings, computeConstructorStandings } from "@/lib/scoring";
+import { auth } from "@/auth";
 import { Card, DriverAvatar, PositionMark, Button } from "@/components/ui";
 import { ChampionshipProgress } from "@/components/ChampionshipProgress";
+import { TeamManagement } from "@/components/TeamManagement";
+import { TeamTag } from "@/components/TeamTag";
+import { getTeamByDriverId } from "@/lib/championship-teams";
 
 export default async function ChampionshipOverviewPage({ params }: { params: { id: string } }) {
-  const championship = await getChampionshipFull(params.id);
+  const [championship, session] = await Promise.all([getChampionshipFull(params.id), auth()]);
+  const isAdmin = session?.user.role === "ADMIN";
   const standings = computeStandings(championship);
+  const constructorStandings = computeConstructorStandings(championship);
+  const teamByDriverId = getTeamByDriverId(championship);
   const leader = standings[0];
   const nextRace = championship.races.find((r) => r.status === "OPEN");
   const lastRace = [...championship.races].reverse().find((r) => r.status === "COMPLETED");
@@ -75,9 +82,14 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg">Standings</h2>
-          <Link href={`/championships/${championship.id}/standings`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
-            Full table →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href={`/championships/${championship.id}/progression`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+              Progression →
+            </Link>
+            <Link href={`/championships/${championship.id}/standings`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+              Full table →
+            </Link>
+          </div>
         </div>
         <div className="space-y-1">
           {standings.slice(0, 8).map((row) => (
@@ -89,12 +101,39 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
               <span className="w-5 stat-figure text-track-400 text-sm">{row.position}</span>
               <DriverAvatar name={row.driver.name} carColour={row.driver.carColour} avatarUrl={row.driver.avatarUrl} size={28} />
               <span className="flex-1 text-sm text-white truncate">{row.driver.nickname || row.driver.name}</span>
+              {teamByDriverId.get(row.driverId) && <TeamTag team={teamByDriverId.get(row.driverId)!} className="shrink-0" />}
               <span className="stat-figure text-white font-semibold">{row.points}</span>
               <span className="hud-tick w-10 text-right">PTS</span>
             </Link>
           ))}
         </div>
       </Card>
+
+      {constructorStandings.length > 0 && (
+        <Card>
+          <h2 className="text-lg mb-4">Constructors&apos; standings</h2>
+          <div className="space-y-1">
+            {constructorStandings.map((row) => (
+              <div key={row.teamId} className="flex items-center gap-3 py-2 px-2 -mx-2">
+                <span className="w-5 stat-figure text-track-400 text-sm">{row.position}</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-track-600"
+                  style={{ backgroundColor: row.team.colour.toLowerCase() }}
+                  aria-hidden
+                />
+                <span className="flex-1 text-sm text-white truncate">
+                  {row.team.name} <span className="text-track-500">({row.team.abbreviation})</span>
+                </span>
+                <span className="text-xs text-track-400">{row.wins} win{row.wins === 1 ? "" : "s"}</span>
+                <span className="stat-figure text-white font-semibold">{row.points}</span>
+                <span className="hud-tick w-10 text-right">PTS</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <TeamManagement championshipId={championship.id} isAdmin={!!isAdmin} />
     </div>
   );
 }

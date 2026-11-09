@@ -1,10 +1,12 @@
 import type {
   Championship,
   ChampionshipDriver,
+  ChampionshipDriverTeam,
   Driver,
   Race,
   RaceResult,
   ResultStatus,
+  Team,
 } from "@prisma/client";
 
 export type PointsSystem = Record<string, number>;
@@ -24,6 +26,11 @@ export type RaceWithResults = Race & {
 export type ChampionshipFull = Championship & {
   drivers: (ChampionshipDriver & { driver: DriverWithUser })[];
   races: RaceWithResults[];
+  // V2: championship-scoped teams and the driver <-> team assignments for
+  // this championship (one row per assigned driver — an unassigned driver
+  // simply has no matching row here).
+  teams: Team[];
+  driverTeams: ChampionshipDriverTeam[];
 };
 
 export interface StandingRow {
@@ -54,4 +61,16 @@ export interface DriverStats {
   dnsCount: number;
   bestFinish: number | null;
   avgFinish: number | null;
+}
+
+// V2 spec section 10-11: constructors' points are always derived from
+// driver results, never entered directly — see computeConstructorStandings
+// in lib/scoring.ts.
+export interface ConstructorStandingRow {
+  teamId: string;
+  team: Team;
+  points: number;
+  wins: number;
+  podiums: number;
+  position: number;
 }

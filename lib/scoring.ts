@@ -1,5 +1,5 @@
 import type { Driver, ResultStatus } from "@prisma/client";
-import type { ChampionshipFull, PointsSystem, RoundCell, StandingRow } from "@/types";
+import type { ChampionshipFull, ConstructorStandingRow, PointsSystem, RoundCell, StandingRow } from "@/types";
 
 /**
  * Default championship points table.
@@ -173,4 +173,72 @@ function compareStandingRows(a: StandingRow, b: StandingRow): number {
 export function resolveChampion(championship: ChampionshipFull): Driver | null {
   const standings = computeStandings(championship);
   return standings[0]?.driver ?? null;
+}
+
+/**
+ * V2: constructors' standings (spec sections 10-11). Deliberately does
+ * NOT recompute points — it sums the same `result.championshipPoints`
+ * that `computeStandings` sums for drivers, just grouped by team instead
+ * of by driver, so a team's total can never drift from what its drivers
+ * actually scored. A driver with no team assignment contributes to no
+ * team (not an error — teams are optional, not required).
+ *
+ * Returns an empty array if the championship has no teams at all, so
+ * callers can treat "no constructors' table" as the normal case for any
+ * championship (V1-era or otherwise) that was never given teams.
+ *
+ * Tie-break mirrors the driver standings' spirit at the level available
+ * for a team: points, then wins, then podiums, then team name. No
+ * position-by-position countback — that's not meaningful for a team the
+ * way it is for a single driver's own finishing history.
+ */
+export function computeConstructorStandings(championship: ChampionshipFull): ConstructorStandingRow[] {
+  if (championship.teams.length === 0) return [];
+
+  const teamIdByDriverId = new Map(championship.driverTeams.map((dt) => [dt.driverId, dt.teamId]));
+
+  const totals = new Map<string, { points: number; wins: number; podiums: number }>();
+  for (const team of championship.teams) {
+    totals.set(team.id, { points: 0, wins: 0, podiums: 0 });
+  }
+
+  for (const race of championship.races) {
+    for (const result of race.results) {
+      const teamId = teamIdByDriverId.get(result.driverId);
+      if (!teamId) continue; // driver isn't assigned to a team this championship
+
+      const teamTotals = totals.get(teamId);
+      if (!teamTotals) continue; // guards against a stale/mismatched assignment
+
+      teamTotals.points += result.championshipPoints;
+      if (result.resultStatus === "FINISHED" && result.finishingPosition != null) {
+        if (result.finishingPosition === 1) teamTotals.wins += 1;
+        if (result.finishingPosition <= 3) teamTotals.podiums += 1;
+      }
+    }
+  }
+
+  const rows: ConstructorStandingRow[] = championship.teams.map((team) => {
+    const teamTotals = totals.get(team.id)!;
+    return {
+      teamId: team.id,
+      team,
+      points: teamTotals.points,
+      wins: teamTotals.wins,
+      podiums: teamTotals.podiums,
+      position: 0, // resolved below
+    };
+  });
+
+  rows.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.podiums !== a.podiums) return b.podiums - a.podiums;
+    return a.team.name.localeCompare(b.team.name);
+  });
+  rows.forEach((row, i) => {
+    row.position = i + 1;
+  });
+
+  return rows;
 }
