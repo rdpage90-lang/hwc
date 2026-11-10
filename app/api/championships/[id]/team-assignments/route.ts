@@ -18,6 +18,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await requireAdmin();
     const input = assignTeamSchema.parse(await req.json());
 
+    const championship = await db.championship.findUnique({
+      where: { id: params.id },
+      select: { status: true },
+    });
+    if (!championship) throw new DomainError("Championship not found", 404);
+    if (championship.status === "COMPLETED") {
+      throw new DomainError("This championship is completed — team assignments are locked.", 409);
+    }
+
     const championshipDriver = await db.championshipDriver.findUnique({
       where: { championshipId_driverId: { championshipId: params.id, driverId: input.driverId } },
     });
