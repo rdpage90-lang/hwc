@@ -50,9 +50,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const championship = await db.championship.findUnique({
       where: { id: params.id },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!championship) throw new DomainError("Championship not found", 404);
+    if (championship.status === "COMPLETED") {
+      throw new DomainError("This championship is completed — its teams are locked.", 409);
+    }
 
     const team = await db.team.create({
       data: {
