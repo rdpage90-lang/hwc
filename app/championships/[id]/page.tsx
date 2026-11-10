@@ -14,6 +14,22 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
   const standings = computeStandings(championship);
   const constructorStandings = computeConstructorStandings(championship);
   const teamByDriverId = getTeamByDriverId(championship);
+
+  // Constructors' champion (V2 spec section 14): the top of the final
+  // constructors' standings once the championship is completed. Derived, not
+  // stored — safe because results are immutable and team assignments are now
+  // locked at completion, so these inputs can never change afterwards.
+  const topConstructor = constructorStandings[0];
+  const constructorsChampion =
+    championship.status === "COMPLETED" && topConstructor && topConstructor.points > 0 ? topConstructor : null;
+  const constructorsChampionDriverNames = constructorsChampion
+    ? championship.driverTeams
+        .filter((dt) => dt.teamId === constructorsChampion.teamId)
+        .map((dt) => championship.drivers.find((d) => d.driverId === dt.driverId)?.driver)
+        .filter((d): d is NonNullable<typeof d> => !!d)
+        .map((d) => d.nickname || d.name)
+    : [];
+
   const leader = standings[0];
   const nextRace = championship.races.find((r) => r.status === "OPEN");
   const lastRace = [...championship.races].reverse().find((r) => r.status === "COMPLETED");
@@ -79,6 +95,28 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
         )}
       </div>
 
+      {constructorsChampion && (
+        <Card>
+          <div className="hud-tick mb-3">Constructors&apos; champion</div>
+          <div className="flex items-center gap-4">
+            <span
+              className="w-4 h-4 rounded-full shrink-0 border border-track-600"
+              style={{ backgroundColor: constructorsChampion.team.colour.toLowerCase() }}
+              aria-hidden
+            />
+            <div>
+              <div className="text-xl text-white font-display font-semibold">{constructorsChampion.team.name}</div>
+              <div className="stat-figure text-track-300 text-sm mt-0.5">
+                {constructorsChampion.points} PTS · {constructorsChampion.wins} wins · {constructorsChampion.podiums} podiums
+              </div>
+              {constructorsChampionDriverNames.length > 0 && (
+                <div className="text-xs text-track-500 mt-1">{constructorsChampionDriverNames.join(" · ")}</div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg">Standings</h2>
@@ -133,7 +171,8 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
         </Card>
       )}
 
-      <TeamManagement championshipId={championship.id} isAdmin={!!isAdmin} />
+      {/* Team assignments are part of a completed championship's permanent record (V2 spec section 41), so editing stops at completion. */}
+      <TeamManagement championshipId={championship.id} isAdmin={!!isAdmin && championship.status !== "COMPLETED"} />
     </div>
   );
 }
