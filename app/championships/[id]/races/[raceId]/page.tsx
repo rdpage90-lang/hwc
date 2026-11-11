@@ -1,8 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getChampionshipFull } from "@/lib/championship";
 import { auth } from "@/auth";
+import { getRaceStatistics } from "@/lib/race-stats";
+import { getRaceReport } from "@/lib/race-report";
 import { DriverAvatar, PositionMark, Badge } from "@/components/ui";
 import { ResultEntryForm } from "@/components/ResultEntryForm";
+import { RaceStatistics } from "@/components/RaceStatistics";
+import { RaceReportCard } from "@/components/RaceReportCard";
 
 export default async function RaceDetailPage({ params }: { params: { id: string; raceId: string } }) {
   const [championship, session] = await Promise.all([getChampionshipFull(params.id), auth()]);
@@ -51,6 +56,12 @@ export default async function RaceDetailPage({ params }: { params: { id: string;
     return (
       <div>
         {header}
+        <Link
+          href={`/race-day/${championship.id}/${race.id}`}
+          className="inline-block mb-5 text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish"
+        >
+          Use Race Day mode →
+        </Link>
         <ResultEntryForm championshipId={championship.id} raceId={race.id} drivers={eligibleDrivers} />
       </div>
     );
@@ -62,6 +73,9 @@ export default async function RaceDetailPage({ params }: { params: { id: string;
     if (rank(a.resultStatus) !== rank(b.resultStatus)) return rank(a.resultStatus) - rank(b.resultStatus);
     return (a.finishingPosition ?? 99) - (b.finishingPosition ?? 99);
   });
+
+  const stats = getRaceStatistics(race.results);
+  const report = getRaceReport(championship, race);
 
   return (
     <div>
@@ -89,6 +103,16 @@ export default async function RaceDetailPage({ params }: { params: { id: string;
           Submitted {new Date(race.submittedAt).toLocaleString()}
         </p>
       )}
+
+      {report && (
+        <div className="mt-6">
+          <RaceReportCard report={report} />
+        </div>
+      )}
+
+      <div className="mt-6">
+        <RaceStatistics stats={stats} />
+      </div>
     </div>
   );
 }
