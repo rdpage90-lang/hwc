@@ -58,6 +58,18 @@ export function Nav({ role, name }: { role: "ADMIN" | "PLAYER"; name: string }) 
               </Link>
             ))}
 
+            <Link
+              href="/race-day"
+              className={clsx(
+                "px-3 py-2 text-sm font-medium transition-colors border-b-2",
+                isActive("/race-day")
+                  ? "text-white border-heat"
+                  : "text-track-400 border-transparent hover:text-track-300 hover:border-track-600",
+              )}
+            >
+              Race Day
+            </Link>
+
             <div className="relative" ref={statsRef}>
               <button
                 type="button"
