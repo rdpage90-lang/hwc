@@ -70,9 +70,12 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
             <div className="hud-tick mb-3">Next race</div>
             <div className="text-xl text-white font-display font-semibold">{nextRace.trackName}</div>
             <div className="text-sm text-track-400 mt-0.5">Round {nextRace.roundNumber} of {championship.numberOfRaces}</div>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-3">
               <Button href={`/championships/${championship.id}/races/${nextRace.id}`} size="sm">
                 Enter results
+              </Button>
+              <Button href="/race-day" variant="secondary" size="sm">
+                Race Day
               </Button>
             </div>
           </Card>
