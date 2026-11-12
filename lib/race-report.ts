@@ -128,8 +128,10 @@ export function getRaceReport(championship: ChampionshipFull, race: Race): RaceR
     paragraphs.push(`Nobody was classified at ${track}.`);
   } else {
     const behind: string[] = [];
-    if (stats.podium[1]) behind.push(stats.podium[1].name);
-    if (stats.podium[2]) behind.push(stats.podium[2].name);
+    const runnerUp = stats.podium[1];
+    const thirdPlace = stats.podium[2];
+    if (runnerUp) behind.push(runnerUp.name);
+    if (thirdPlace) behind.push(thirdPlace.name);
 
     let p1 =
       behind.length === 0
