@@ -39,7 +39,7 @@ export default async function RaceDayPage() {
       ) : (
         raceCards.map(({ championship, race, standings }) => {
           const top = standings.slice(0, 3);
-          const anyPoints = top.length > 0 && top[0].points > 0;
+          const anyPoints = (top[0]?.points ?? 0) > 0;
 
           return (
             <Card key={race.id}>
