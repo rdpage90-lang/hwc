@@ -120,6 +120,22 @@ export default async function ChampionshipOverviewPage({ params }: { params: { i
         </Card>
       )}
 
+      {championship.status === "COMPLETED" && (
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div className="hud-tick">Season recap</div>
+            <div className="flex items-center gap-4">
+              <Link href={`/championships/${championship.id}/awards`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+                Awards →
+              </Link>
+              <Link href={`/championships/${championship.id}/timeline`} className="text-xs text-heat hover:text-heat-bright font-mono uppercase tracking-wideish">
+                Timeline →
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg">Standings</h2>
